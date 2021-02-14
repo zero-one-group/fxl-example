@@ -6,6 +6,10 @@
     [clj-time.format :as f]
     [zero-one.fxl.core :as fxl]))
 
+;; ---------------------------------------------------------------------------
+;; Data
+;; ---------------------------------------------------------------------------
+
 (def inventory
   (cheshire/parse-stream (io/reader "data/inventory.json")))
 
@@ -21,18 +25,9 @@
    :site "Jakarta"
    :timestamp (timestamp)})
 
-(def form-header-cells
-  (fxl/table->cells
-    [["Document ID:"     (:doc-id form-data)]
-     ["Revision Number:" (:revision-number form-data)]
-     ["Site:"            (:site form-data)]
-     ["Timestamp:"       (:timestamp form-data)]]))
-
-(def create-footer-cells
-  (fxl/table->cells [["Created By:" nil] ["Date:" nil]]))
-
-(def check-footer-cells
-  (fxl/table->cells [["Checked By:" nil] ["Date:" nil]]))
+;; ---------------------------------------------------------------------------
+;; Styles
+;; ---------------------------------------------------------------------------
 
 (defn fill-border [cell]
   (-> cell
@@ -56,25 +51,8 @@
 (defn num-data-format [cell]
   (assoc-in cell [:style :data-format] "#,##0"))
 
-(defn style-form-cell [cell]
-  (let [cell (fill-border cell)]
-    (if (= 0 (-> cell :coord :col))
-      (-> cell bold align-right grey-bg)
-      (-> cell align-center))))
-
-(defn inventory-table-header-cells [quarter months]
-  (fxl/concat-below
-    (fxl/row->cells [quarter
-                     nil (first months) nil
-                     nil (second months) nil
-                     nil (last months) nil])
-    (fxl/row->cells ["Raw Material"
-                     "Opening" "Inflows" "Outflows"
-                     "Opening" "Inflows" "Outflows"
-                     "Opening" "Inflows" "Outflows"])))
-
-(def raw-material-column-cells
-  (fxl/table->cells (map #(vector %) raw-materials)))
+(defn auto-col-size [cell]
+  (assoc-in cell [:style :col-size] :auto))
 
 (defn highlight-shortage [cell]
   (let [qty (:value cell)]
@@ -84,6 +62,12 @@
       :else (-> cell
                 (assoc-in [:style :background-colour] :red)
                 (assoc-in [:style :font-colour] :white)))))
+
+(defn style-form-cell [cell]
+  (let [cell (fill-border cell)]
+    (if (= 0 (-> cell :coord :col))
+      (-> cell bold align-right grey-bg)
+      (-> cell align-center))))
 
 (defn style-inventory-cell [cell]
   (let [row  (-> cell :coord :row)
@@ -101,6 +85,37 @@
           (or (= row 0) (= row 1) (= col 0)) grey-bg)
         (cond->
           (= col 0) align-right))))
+
+;; ---------------------------------------------------------------------------
+;; Cells
+;; ---------------------------------------------------------------------------
+(def form-header-cells
+  (fxl/table->cells
+    [["Document ID:"     (:doc-id form-data)]
+     ["Revision Number:" (:revision-number form-data)]
+     ["Site:"            (:site form-data)]
+     ["Timestamp:"       (:timestamp form-data)]]))
+
+(def create-footer-cells
+  (fxl/table->cells [["Created By:" nil] ["Date:" nil]]))
+
+(def check-footer-cells
+  (fxl/table->cells [["Checked By:" nil] ["Date:" nil]]))
+
+
+(defn inventory-table-header-cells [quarter months]
+  (fxl/concat-below
+    (fxl/row->cells [quarter
+                     nil (first months) nil
+                     nil (second months) nil
+                     nil (last months) nil])
+    (fxl/row->cells ["Raw Material"
+                     "Opening" "Inflows" "Outflows"
+                     "Opening" "Inflows" "Outflows"
+                     "Opening" "Inflows" "Outflows"])))
+
+(def raw-material-column-cells
+  (fxl/table->cells (map #(vector %) raw-materials)))
 
 (defn single-month-inventory-cells [month]
   (let [months-inventory (inventory month)]
@@ -130,8 +145,9 @@
     (fxl/pad-below 1 (single-quarter-inventory-cells "Q3" ["Jul" "Aug" "Sep"]))
     (single-quarter-inventory-cells "Q4" ["Oct" "Nov" "Dec"])))
 
-(defn auto-col-size [cell]
-  (assoc-in cell [:style :col-size] :auto))
+;; ---------------------------------------------------------------------------
+;; Spreadsheet
+;; ---------------------------------------------------------------------------
 
 (fxl/write-xlsx!
   (map auto-col-size
