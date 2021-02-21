@@ -110,7 +110,8 @@
 ;; ---------------------------------------------------------------------------
 
 (def raw-material-column-cells
-  (fxl/table->cells (map #(vector %) raw-materials)))
+  (fxl/table->cells
+    (map #(vector %) raw-materials)))
 
 (fxl/write-xlsx!
   (->> raw-material-column-cells
@@ -173,10 +174,17 @@
 
 (def inventory-cells
   (fxl/concat-below
-    (fxl/pad-below 1 (single-quarter-inventory-cells "Q1" ["Jan" "Feb" "Mar"]))
-    (fxl/pad-below 1 (single-quarter-inventory-cells "Q2" ["Apr" "May" "Jun"]))
-    (fxl/pad-below 1 (single-quarter-inventory-cells "Q3" ["Jul" "Aug" "Sep"]))
-    (single-quarter-inventory-cells "Q4" ["Oct" "Nov" "Dec"])))
+    (fxl/pad-below
+      (single-quarter-inventory-cells
+        "Q1" ["Jan" "Feb" "Mar"]))
+    (fxl/pad-below
+      (single-quarter-inventory-cells
+        "Q2" ["Apr" "May" "Jun"]))
+    (fxl/pad-below
+      (single-quarter-inventory-cells
+        "Q3" ["Jul" "Aug" "Sep"]))
+    (single-quarter-inventory-cells
+      "Q4" ["Oct" "Nov" "Dec"])))
 
 (fxl/write-xlsx!
   (->> inventory-cells
@@ -197,7 +205,9 @@
       check-footer-cells)))
 
 (fxl/write-xlsx!
-  all-cells
+  (->> all-cells
+       (map #(fxl/shift-right 1 %))
+       (map #(fxl/shift-down 1 %)))
   "data/unstyled-inventory.xlsx")
 
 ;; ---------------------------------------------------------------------------
@@ -206,10 +216,14 @@
 
 (defn fill-border [cell]
   (-> cell
-      (assoc-in [:style :bottom-border] {:style :thin :colour :black})
-      (assoc-in [:style :left-border] {:style :thin :colour :black})
-      (assoc-in [:style :right-border] {:style :thin :colour :black})
-      (assoc-in [:style :top-border] {:style :thin :colour :black})))
+      (assoc-in [:style :bottom-border]
+                {:style :thin :colour :black})
+      (assoc-in [:style :left-border]
+                {:style :thin :colour :black})
+      (assoc-in [:style :right-border]
+                {:style :thin :colour :black})
+      (assoc-in [:style :top-border]
+                {:style :thin :colour :black})))
 
 (defn bold [cell]
   (assoc-in cell [:style :bold] true))
@@ -236,11 +250,14 @@
 (defn highlight-shortage [cell]
   (let [qty (:value cell)]
     (cond
-      (< 100 qty) cell
-      (< 0 qty) (assoc-in cell [:style :background-colour] :yellow)
-      :else (-> cell
-                (assoc-in [:style :background-colour] :red)
-                (assoc-in [:style :font-colour] :white)))))
+      (< 100 qty)
+      cell
+      (< 0 qty)
+      (assoc-in cell [:style :background-colour] :yellow)
+      :else
+      (-> cell
+          (assoc-in [:style :background-colour] :red)
+          (assoc-in [:style :font-colour] :white)))))
 
 (defn style-form-cell [cell]
   (let [cell (fill-border cell)]
@@ -255,13 +272,17 @@
         align-center
         fill-border
         (cond->
-          (and (not= row 0) (not= col 0)) num-data-format)
+          (and (not= row 0) (not= col 0))
+          num-data-format)
         (cond->
-          (and (not= row 0) (not= row 1) (not= col 0)) highlight-shortage)
+          (and (not= row 0) (not= row 1) (not= col 0))
+          highlight-shortage)
         (cond->
-          (or (= row 0) (= row 1) (= col 0)) bold)
+          (or (= row 0) (= row 1) (= col 0))
+          bold)
         (cond->
-          (or (= row 0) (= row 1) (= col 0)) grey-bg)
+          (or (= row 0) (= row 1) (= col 0))
+          grey-bg)
         (cond->
           (= col 0) align-right))))
 
